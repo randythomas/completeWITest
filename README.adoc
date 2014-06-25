@@ -2,7 +2,7 @@
 :toc2:
 :ref_arch_doc: link:doc/ref_arch.adoc[user guide]
 
-image::doc/images/rhheader.png[width=900]
+image::images/rhheader.png[width=900]
 
 :numbered!:
 
@@ -18,5 +18,77 @@ a Bugzilla request.
 :numbered:
 
 == Assumptions
+The following items are required to follow the steps below:
 
+. BPM Suite 6 instance, version 6.0.1, installed over JBoss EAP 6.1.1
+. curl - to send http requests from the command line
+
+== To reproduce the error
+
+.Add the organizational unit
+----------
+curl -vv -u jboss:jbosspw1! -X POST -H "Content-Type: application/json" -d '{"name":"gpe","description":"","owner":"jboss"}' http://localhost:8080/business-central/rest/organizationalunits/
+----------
+
+.Add the repository(change to the gitURL)
+----------
+curl -vv -u jboss:jbosspw1! -X POST -H "Content-Type: application/json" -d '{"name":"completeWIrepo","description":"gpe","userName":"","password":"","requestType":"clone","gitURL":"file:///Users/RHAdmin/GPSE/Partners/bzs/bpms/completeWIFailure"}' http://localhost:8080/business-central/rest/repositories
+----------
+
+.Deploy the module
+----------
+curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=PER_PROCESS_INSTANCE
+----------
+
+.Start the process
+----------
+curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/processTier.concurrentPInstanceSignal/start?map_p1=5i
+----------
+
+
+.Complete the Work Item
+----------
+curl -vv -u jboss:jbosspw1! -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete
+----------
+
+The complete work item call results in the following warning on the server:
+
+**********
+WARN  [org.kie.services.remote.rest.exception.DescriptiveExceptionHandler] (http-localhost/127.0.0.1:8080-1) Exception thrown when processing request [/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/112/complete]; responding with status -1: java.lang.IllegalStateException: Invalid session was used for this context org.kie.internal.runtime.manager.context.ProcessInstanceIdContext@6e04f404
+**********
+
+The client gets the following corresponding error message:
+
+**********
+ <status>FAILURE</status>
+    <url>http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/112/complete</url>
+    <message>IllegalStateException thrown with message 'Invalid session was used for this context org.kie.internal.runtime.manager.context.ProcessInstanceIdContext@6e04f404'</message>
+    <stackTrace>java.lang.IllegalStateException: Invalid session was used for this context org.kie.internal.runtime.manager.context.ProcessInstanceIdContext@6e04f404
+**********
+
+If you check the sessioninfo table in the database, you will find that a new entry has been made for a new session.
+
+== What is expected
+The call to complete the work item should have used the orignal session id to perform the complete function.  The process should go to the next node in the process and terminate.
+To emulate what should occur, abort the above process, undeploy the project.  Then rerun the project and the steps above using SINGLETON as the runtime strategy.  The `curl` commands for this follow.
+
+.Abort the Process Instance
+----------
+curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/instance/112/abort
+----------
+
+
+.Uneploy the module
+----------
+curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
+----------
+
+.Redeploy as a SINGLETON
+----------
+curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=SINGLETON
+----------
+
+The remaining steps are the same as the above.
+
+When the process is deployed with a SINGLETON runtime strategy, the work item completes as expected.
 
