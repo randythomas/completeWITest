@@ -11,6 +11,12 @@ One of the primary purpose of a Business Process Management (BPM) solution is to
 Typically, the process instance is _signalled_ so as to re-load the process instance from its wait-state and advance it to the next node in the process definition.
 Red Hat's BPM Suite 6 product includes extensive support for signalling of long running process instances in a wait-state.
 
-The purpose of this reference architecture is deep-dive into the _signalling_ capabilities of BPM Suite 6.
+The purpose of this project is to investigate and prove that the BPM Suite 6 functions properly upon receiving a REST call to complete a work item.
+The steps to use this project are provided below.  If there is an error in the project, then the below step will be provided as steps to reproduce the error in 
+a Bugzilla request.
 
-This reference architecture includes a BPM Suite 6 _KIE project_ and {ref_arch_doc} that showcase a variety of advanced _signalling_ use-cases.
+:numbered:
+
+== Assumptions
+
+
