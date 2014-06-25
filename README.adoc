@@ -54,7 +54,9 @@ curl -vv -u jboss:jbosspw1! -X POST 'http://localhost:8080/business-central/rest
 The complete work item call results in the following warning on the server:
 
 **********
- WARN  [org.kie.services.remote.rest.exception.DescriptiveExceptionHandler] (http-localhost/127.0.0.1:8080-1) Exception thrown when processing request [/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/112/complete]; responding with status -1: java.lang.IllegalStateException: Invalid session was used for this context org.kie.internal.runtime.manager.context.ProcessInstanceIdContext@6e04f404
+ WARN  [org.kie.services.remote.rest.exception.DescriptiveExceptionHandler] (http-localhost/127.0.0.1:8080-1) Exception thrown when processing request 
+[/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/112/complete]; responding with status -1: 
+java.lang.IllegalStateException: Invalid session was used for this context org.kie.internal.runtime.manager.context.ProcessInstanceIdContext@6e04f404
 **********
 
 The client gets the following corresponding error message:
