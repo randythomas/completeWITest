@@ -24,31 +24,33 @@ The following items are required to follow the steps below:
 . curl - to send http requests from the command line
 
 == To reproduce the error
+For ease of reproduction, the steps of this use case are provided as curl commands.  To use the commands below please replace the `jboss` username and `password` with the username
+and passord used from your BPM Suite 6 instance.
 
-.Add the organizational unit
+=== Add the organizational unit
 ----------
-curl -vv -u jboss:jbosspw1! -X POST -H "Content-Type: application/json" -d '{"name":"gpe","description":"","owner":"jboss"}' http://localhost:8080/business-central/rest/organizationalunits/
-----------
-
-.Add the repository(change to the gitURL)
-----------
-curl -vv -u jboss:jbosspw1! -X POST -H "Content-Type: application/json" -d '{"name":"completeWIrepo","description":"gpe","userName":"","password":"","requestType":"clone","gitURL":"file:///Users/RHAdmin/GPSE/Partners/bzs/bpms/completeWIFailure"}' http://localhost:8080/business-central/rest/repositories
+curl -vv -u jboss:password -X POST -H "Content-Type: application/json" -d '{"name":"gpe","description":"","owner":"jboss"}' http://localhost:8080/business-central/rest/organizationalunits/
 ----------
 
-.Deploy the module
+=== Add the repository(change to the gitURL)
 ----------
-curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=PER_PROCESS_INSTANCE
-----------
-
-.Start the process
-----------
-curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/processTier.concurrentPInstanceSignal/start?map_p1=5i
+curl -vv -u jboss:password -X POST -H "Content-Type: application/json" -d '{"name":"completeWIrepo","description":"gpe","userName":"","password":"","requestType":"clone","gitURL":"https://github.com/randythomas/completeWITest.git"}' http://localhost:8080/business-central/rest/repositories
 ----------
 
-
-.Complete the Work Item
+=== Deploy the module
 ----------
-curl -vv -u jboss:jbosspw1! -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete
+curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=PER_PROCESS_INSTANCE
+----------
+
+=== Start the process
+----------
+curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/processTier.concurrentPInstanceSignal/start?map_p1=5i
+----------
+
+
+=== Complete the Work Item
+----------
+curl -vv -u jboss:password -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete
 ----------
 
 The complete work item call results in the following warning on the server:
@@ -74,23 +76,21 @@ If you check the sessioninfo table in the database, you will find that a new ent
 The call to complete the work item should have used the orignal session id to perform the complete function.  The process should go to the next node in the process and terminate.
 To emulate what should occur, abort the above process, undeploy the project.  Then rerun the project and the steps above using SINGLETON as the runtime strategy.  The `curl` commands for this follow.
 
-.Abort the Process Instance
+=== Abort the Process Instance
 ----------
-curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/instance/112/abort
-----------
-
-
-.Uneploy the module
-----------
-curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
+curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/instance/112/abort
 ----------
 
-.Redeploy as a SINGLETON
+=== Uneploy the module
 ----------
-curl -vv -u jboss:jbosspw1! -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=SINGLETON
+curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
+----------
+
+=== Redeploy as a SINGLETON
+----------
+curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=SINGLETON
 ----------
 
 The remaining steps are the same as the above.
 
 When the process is deployed with a SINGLETON runtime strategy, the work item completes as expected.
-
