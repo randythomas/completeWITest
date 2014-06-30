@@ -8,8 +8,8 @@ image::images/rhheader.png[width=900]
 
 == PURPOSE:
 One of the primary purpose of a Business Process Management (BPM) solution is to manage the wait-state of long running business process instances.
-Typically, the process instance is _signalled_ so as to re-load the process instance from its wait-state and advance it to the next node in the process definition.
-Red Hat's BPM Suite 6 product includes extensive support for signalling of long running process instances in a wait-state.
+Typically, the process instance is _signaled_ so as to re-load the process instance from its wait-state and advance it to the next node in the process definition.
+Red Hat's BPM Suite 6 product includes extensive support for signaling of long running process instances in a wait-state.
 
 The purpose of this project is to investigate and prove that the BPM Suite 6 functions properly upon receiving a REST call to complete a work item.
 The steps to use this project are provided below.  If there is an error in the project, then the below step will be provided as steps to reproduce the error in 
@@ -20,37 +20,56 @@ a Bugzilla request.
 == Assumptions
 The following items are required to follow the steps below:
 
-. BPM Suite 6 instance, version 6.0.1, installed over JBoss EAP 6.1.1
+. BPM Suite 6 instance, version 6.0.2, installed over JBoss EAP 6.1.1
 . curl - to send http requests from the command line
 
 == To reproduce the error
-For ease of reproduction, the steps of this use case are provided as curl commands.  To use the commands below please replace the `jboss` username and `password` with the username
-and passord used from your BPM Suite 6 instance.
+For ease of reproduction, the steps of this use case are provided as curl commands.  
+
+=== Download and install BPM Suite version 6.0.2 GA
+Configure user `guest` with password `guest`. 
+
+.Hint:
+***********
+- guest=b5d048a237bfd2874b6928e1f37ee15e      (application-users.properties:)
+- guest=admin                                 (application-roles.properties:)
+***********
+
+Start the server.
 
 === Add the organizational unit
 ----------
-curl -vv -u jboss:password -X POST -H "Content-Type: application/json" -d '{"name":"gpe","description":"","owner":"jboss"}' http://localhost:8080/business-central/rest/organizationalunits/
+curl -vv -u guest:guest -X POST -H "Content-Type: application/json" -d '{"name":"gpe","description":"","owner":"jboss"}' http://localhost:8080/business-central/rest/organizationalunits/
 ----------
 
-=== Add the repository(change to the gitURL)
+=== Add the repository
 ----------
-curl -vv -u jboss:password -X POST -H "Content-Type: application/json" -d '{"name":"completeWIrepo","description":"gpe","userName":"","password":"","requestType":"clone","gitURL":"https://github.com/randythomas/completeWITest.git"}' http://localhost:8080/business-central/rest/repositories
+curl -vv -u guest:guest -X POST -H "Content-Type: application/json" -d '{"name":"completeWIrepo","description":"gpe","userName":"","password":"","requestType":"clone","gitURL":"https://github.com/randythomas/completeWITest.git"}' http://localhost:8080/business-central/rest/repositories
 ----------
 
 === Deploy the module
 ----------
-curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=PER_PROCESS_INSTANCE
+curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=PER_PROCESS_INSTANCE
 ----------
 
 === Start the process
 ----------
-curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/processTier.concurrentPInstanceSignal/start?map_p1=5i
+curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/processTier.concurrentPInstanceSignal/start?map_p1=5i
 ----------
 
+Check the server log.  There you will find a log entry that looks similar to the following:
+
+----------
+ksessionId = 2 : pInstanceId = 1 : workItemId = 1 : p1 = 5
+----------
+
+The process instance id value and the work item id value from your output will be used in several commands below.
 
 === Complete the Work Item
+In the following REST call to complete the work item, replace the work item id value of `1` with the value from your log output discussed above.
+
 ----------
-curl -vv -u jboss:password -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete
+curl -vv -u guest:guest -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete'
 ----------
 
 The complete work item call results in the following warning on the server:
@@ -73,22 +92,27 @@ The client gets the following corresponding error message:
 If you check the sessioninfo table in the database, you will find that a new entry has been made for a new session.
 
 == What is expected
-The call to complete the work item should have used the orignal session id to perform the complete function.  The process should go to the next node in the process and terminate.
+The call to complete the work item should have used the original session id to perform the complete function.  The process should go to the next node in the process and terminate.
 To emulate what should occur, abort the above process, undeploy the project.  Then rerun the project and the steps above using SINGLETON as the runtime strategy.  The `curl` commands for this follow.
 
 === Abort the Process Instance
+In the following command, replace the `112` instance id with the `pInstanceId` from your log entry discussed above.
+
 ----------
-curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/instance/112/abort
+curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/process/instance/112/abort
 ----------
+
+
+
 
 === Uneploy the module
 ----------
-curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
+curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
 ----------
 
 === Redeploy as a SINGLETON
 ----------
-curl -vv -u jboss:password -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=SINGLETON
+curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=SINGLETON
 ----------
 
 The remaining steps are the same as the above.
