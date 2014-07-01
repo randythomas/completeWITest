@@ -48,6 +48,8 @@ curl -vv -u guest:guest -X POST -H "Content-Type: application/json" -d '{"name":
 ----------
 
 === Deploy the module
+The following command deploys the project using the `PER_PROCESS_INSTANCE` runtime strategy:
+
 ----------
 curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=PER_PROCESS_INSTANCE
 ----------
@@ -60,10 +62,23 @@ curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/runt
 Check the server log.  There you will find a log entry that looks similar to the following:
 
 ----------
-ksessionId = 2 : pInstanceId = 1 : workItemId = 1 : p1 = 5
+ksessionId = 3 : pInstanceId = 1 : workItemId = 1 : p1 = 5
 ----------
 
 The process instance id value and the work item id value from your output will be used in several commands below.
+
+At this point it is helpful to query the `SessionInfo` table.  For the above example, the table contains the following:
+
+----------
++----+----------------------+---------------------+
+| id | lastModificationDate | startDate           |
++----+----------------------+---------------------+
+|  1 | NULL                 | 2014-07-01 10:58:21 |
+|  3 | 2014-07-01 15:25:08  | 2014-07-01 15:25:08 |
++----+----------------------+---------------------+
+----------
+
+As you would expect, the id value of the last row matches the ksessionId from the log output.
 
 === Complete the Work Item
 In the following REST call to complete the work item, replace the work item id value of `1` with the value from your log output discussed above.
@@ -89,7 +104,17 @@ The client gets the following corresponding error message:
     <stackTrace>java.lang.IllegalStateException: Invalid session was used for this context org.kie.internal.runtime.manager.context.ProcessInstanceIdContext@6e04f404
 **********
 
-If you check the sessioninfo table in the database, you will find that a new entry has been made for a new session.
+If you check the sessioninfo table in the database, you will find that a new entry has been made for a new session.  In the case of this example, the following was queried:
+
+----------
++----+----------------------+---------------------+
+| id | lastModificationDate | startDate           |
++----+----------------------+---------------------+
+|  1 | NULL                 | 2014-07-01 10:58:21 |
+|  3 | 2014-07-01 15:25:08  | 2014-07-01 15:25:08 |
+|  4 | NULL                 | 2014-07-01 15:29:37 |
++----+----------------------+---------------------+
+----------
 
 == What is expected
 The call to complete the work item should have used the original session id to perform the complete function.  The process should go to the next node in the process and terminate.
@@ -103,9 +128,9 @@ curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/runt
 ----------
 
 
-
-
 === Uneploy the module
+The following command deploys the project using the `SINGLETON` runtime strategy:
+
 ----------
 curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
 ----------
