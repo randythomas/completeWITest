@@ -23,7 +23,7 @@ The following items are required to follow the steps below:
 . BPM Suite 6 instance, version 6.0.2, installed over JBoss EAP 6.1.1
 . curl - to send http requests from the command line
 
-== To reproduce the error
+== To reproduce the example
 For ease of reproduction, the steps of this use case are provided as curl commands.  
 
 === Download and install BPM Suite version 6.0.2 GA
@@ -84,10 +84,13 @@ As you would expect, the id value of the last row matches the ksessionId from th
 In the following REST call to complete the work item, replace the work item id value of `1` with the value from your log output discussed above.
 
 ----------
-curl -vv -u guest:guest -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete'
+curl -vv -u guest:guest -X POST 'http://localhost:8080/business-central/rest/runtime/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/workitem/1/complete?runtimeProcInstId=2'
 ----------
 
-The complete work item call results in the following warning on the server:
+WARNING
+----------
+As of version 6.0.2, the `runtimeProcInstId` parameter is missing from the product documentation.  If it is not used the following error results:
+----------
 
 **********
  WARN  [org.kie.services.remote.rest.exception.DescriptiveExceptionHandler] (http-localhost/127.0.0.1:8080-1) Exception thrown when processing request 
@@ -116,11 +119,18 @@ If you check the sessioninfo table in the database, you will find that a new ent
 +----+----------------------+---------------------+
 ----------
 
-== What is expected
-The call to complete the work item should have used the original session id to perform the complete function.  The process should go to the next node in the process and terminate.
-To emulate what should occur, abort the above process, undeploy the project.  Then rerun the project and the steps above using SINGLETON as the runtime strategy.  The `curl` commands for this follow.
+If the `runtimeProcInstId` parameter is included, then the process will complete as expected.
+
+=== Uneploy the module
+The following command undeploys the project:
+
+----------
+curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
+----------
 
 === Abort the Process Instance
+In the advent that anything when wrong, you may have a need to about the process instance.  The following REST call can be used in this case.
+
 In the following command, replace the `112` instance id with the `pInstanceId` from your log entry discussed above.
 
 ----------
@@ -128,18 +138,4 @@ curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/runt
 ----------
 
 
-=== Uneploy the module
-The following command deploys the project using the `SINGLETON` runtime strategy:
 
-----------
-curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/undeploy
-----------
-
-=== Redeploy as a SINGLETON
-----------
-curl -vv -u guest:guest -X POST http://localhost:8080/business-central/rest/deployment/com.redhat.gpe.refarch.bpm_signalling:processTier:1.0:bpmsignalling_base:bpmsignalling_session/deploy?strategy=SINGLETON
-----------
-
-The remaining steps are the same as the above.
-
-When the process is deployed with a SINGLETON runtime strategy, the work item completes as expected.
